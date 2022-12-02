@@ -1,43 +1,48 @@
-
-#include <iostream>
-#include <boost/array.hpp>
-#include <boost/asio.hpp>
-
-using boost::asio::ip::udp;
-
-int main(int argc, char* argv[])
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <time.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#define BUFFLEN 1024
+#define SERVER_PORT 8888
+int main(int argc, char *argv[])
 {
-  try
-  {
-    if (argc != 2)
-    {
-      std::cerr << "Usage: client <host>" << std::endl;
-      return 1;
+         INT S; / * Дескриптор файла сокета сервера * /
+         Структура Sockaddr_in Сервер; / * Локальный адрес * /
+         Char Buff [Bufflen]; / * Буфер данных трансиверов * /
+ 
+         Int n = 0; / * Получать длина строк * /
+         Socklen_t len ​​= 0; / * Длина адреса * /
+         S = разъем (AF_INET, SOCK_DGRAM, 0); / * Установить сокет UDP * /
+ 
+         / * Инициализация инициализации адреса * /
+         MEMSET (& SERVER, 0, SIZEOF (СЕРВЕР); / * CLEAR * /
+         Server.sin_family = af_inet; / * af_inet протокол * /
+         Server.sin_addr.s_addr = htonl (inaddr_any); / * любой локальный адрес * /
+         Server.sin_port = htons (server_port); / * порт сервера * /
+ 
+    while(1){
+                 MEMSET (BUFF, 0, BUFFLEN); / * CLEAR * /
+                 Strcpy (buff, "Сколько времени?"); / * Копировать Строка отправки * /
+ 
+                 / * Отправить данные * /
+        sendto(s, buff, strlen(buff), 0, (struct sockaddr*)&server,
+        sizeof(server));
+                 MEMSET (BUFF, 0, BUFFLEN); / * CLEAR * /
+ 
+                 / * Получать данные * /
+        len = sizeof(server);
+        n = recvfrom(s, buff, BUFFLEN, 0, (struct sockaddr*)&server, &len);
+ 
+                 / * Печать сообщения * /
+        if(n >0){
+            printf("%s",buff);
+        }
+        sleep(1);
     }
-
-    boost::asio::io_service io_service;
-
-    udp::resolver resolver(io_service);
-    udp::resolver::query query(udp::v4(), argv[1], "daytime");
-    udp::endpoint receiver_endpoint = *resolver.resolve(query);
-
-    udp::socket socket(io_service);
-    socket.open(udp::v4());
-
-    boost::array<char, 1> send_buf  = { 0 };
-    socket.send_to(boost::asio::buffer(send_buf), receiver_endpoint);
-
-    boost::array<char, 128> recv_buf;
-    udp::endpoint sender_endpoint;
-    size_t len = socket.receive_from(
-        boost::asio::buffer(recv_buf), sender_endpoint);
-
-    std::cout.write(recv_buf.data(), len);
-  }
-  catch (std::exception& e)
-  {
-    std::cerr << e.what() << std::endl;
-  }
-
-  return 0;
+ 
+    close(s);
+    return 0;
 }
