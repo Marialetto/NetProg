@@ -1,48 +1,70 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <time.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdio.h>
-#define BUFFLEN 1024
-#define SERVER_PORT 8888
-int main(int argc, char *argv[])
+#include <iostream>
+#include <string>
+#include <cstdlib> //exit()
+#include <cstring> // strpy()
+#include <unistd.h> //close()
+#include <netinet/in.h> 
+#include <arpa/inet.h>
+using namespace std;
+void Exception(const string & why, const int exitCode ) // Исключения (возможные ошибки)
 {
-         INT S; / * Дескриптор файла сокета сервера * /
-         Структура Sockaddr_in Сервер; / * Локальный адрес * /
-         Char Buff [Bufflen]; / * Буфер данных трансиверов * /
- 
-         Int n = 0; / * Получать длина строк * /
-         Socklen_t len ​​= 0; / * Длина адреса * /
-         S = разъем (AF_INET, SOCK_DGRAM, 0); / * Установить сокет UDP * /
- 
-         / * Инициализация инициализации адреса * /
-         MEMSET (& SERVER, 0, SIZEOF (СЕРВЕР); / * CLEAR * /
-         Server.sin_family = af_inet; / * af_inet протокол * /
-         Server.sin_addr.s_addr = htonl (inaddr_any); / * любой локальный адрес * /
-         Server.sin_port = htons (server_port); / * порт сервера * /
- 
-    while(1){
-                 MEMSET (BUFF, 0, BUFFLEN); / * CLEAR * /
-                 Strcpy (buff, "Сколько времени?"); / * Копировать Строка отправки * /
- 
-                 / * Отправить данные * /
-        sendto(s, buff, strlen(buff), 0, (struct sockaddr*)&server,
-        sizeof(server));
-                 MEMSET (BUFF, 0, BUFFLEN); / * CLEAR * /
- 
-                 / * Получать данные * /
-        len = sizeof(server);
-        n = recvfrom(s, buff, BUFFLEN, 0, (struct sockaddr*)&server, &len);
- 
-                 / * Печать сообщения * /
-        if(n >0){
-            printf("%s",buff);
-        }
-        sleep(1);
+    cout << "ErrorCode:"<<exitCode <<endl<< why << endl;
+    exit(exitCode);
+}
+int main()
+{
+    // структура с адресом нашей программы (клиента)
+    sockaddr_in * selfAddr = new (sockaddr_in);
+    selfAddr->sin_family = AF_INET; // интернет протокол IPv4
+    selfAddr->sin_port = 0;         // любой порт на усмотрение ОС
+    selfAddr->sin_addr.s_addr = 0;  
+    // структура с адресом "на той стороне" (сервера)
+    sockaddr_in * remoteAddr = new (sockaddr_in);
+    remoteAddr->sin_family = AF_INET;     // интернет протокол IPv4
+    remoteAddr->sin_port = htons(7);  // port 7
+    remoteAddr->sin_addr.s_addr = inet_addr("95.152.62.42"); //  адрес 
+    // буфер для передачи и приема данных
+    char *buffer = new char[1024];
+    strcpy(buffer,"Hello, World!");   //копируем строку
+    int msgLen = strlen(buffer);           //вычисляем длину строки
+    // создаём сокет
+    int mySocket = socket(AF_INET, SOCK_STREAM, 0); //tcp протокол
+    if (mySocket == -1) {
+        close(mySocket);
+        Exception("Error open socket",1);
     }
- 
-    close(s);
+    //связываем сокет с адрессом
+    int rc = bind(mySocket,(const sockaddr *) selfAddr, sizeof(sockaddr_in));
+    if (rc == -1) {
+        close(mySocket);
+        Exception("Error bind socket with local address",2);
+        }
+    //установливаем соединение
+    rc = connect(mySocket, (const sockaddr*) remoteAddr, sizeof(sockaddr_in));
+    if (rc == -1) {
+        close(mySocket);
+        Exception("Error connect socket with remote server.", 3);
+    }
+
+    // передаём сообщение из буффера
+    rc = send(mySocket, buffer, msgLen, 0);
+    if (rc == -1) {
+        close(mySocket);
+        Exception("Error send message", 4);
+    }
+    cout << "We send: " << buffer << endl; 
+    // принимаем ответ в буффер
+    rc = recv(mySocket, buffer, 1024, 0);
+    if (rc == -1) {
+        close(mySocket);
+       Exception("Error receive answer.", 5);
+    }
+    buffer[rc] = '\0'; // конец принятой строки
+    cout << "We receive: " << buffer << endl; // вывод полученного сообщения от сервера
+    // закрыем сокет
+    close(mySocket);
+    delete selfAddr;
+    delete remoteAddr;
+    delete[] buffer;
     return 0;
 }
