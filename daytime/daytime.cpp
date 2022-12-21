@@ -1,70 +1,68 @@
 #include <iostream>
+#include <cstdlib>
 #include <string>
-#include <cstdlib> //exit()
-#include <cstring> // strpy()
-#include <unistd.h> //close()
-#include <netinet/in.h> 
+#include <cstring>
+#include <unistd.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
-using namespace std;
-void Exception(const string & why, const int exitCode ) // Исключения (возможные ошибки)
-{
-    cout << "ErrorCode:"<<exitCode <<endl<< why << endl;
-    exit(exitCode);
-}
-int main()
-{
-    // структура с адресом нашей программы (клиента)
-    sockaddr_in * selfAddr = new (sockaddr_in);
-    selfAddr->sin_family = AF_INET; // интернет протокол IPv4
-    selfAddr->sin_port = 0;         // любой порт на усмотрение ОС
-    selfAddr->sin_addr.s_addr = 0;  
-    // структура с адресом "на той стороне" (сервера)
-    sockaddr_in * remoteAddr = new (sockaddr_in);
-    remoteAddr->sin_family = AF_INET;     // интернет протокол IPv4
-    remoteAddr->sin_port = htons(7);  // port 7
-    remoteAddr->sin_addr.s_addr = inet_addr("95.152.62.42"); //  адрес 
-    // буфер для передачи и приема данных
-    char *buffer = new char[1024];
-    strcpy(buffer,"Hello, World!");   //копируем строку
-    int msgLen = strlen(buffer);           //вычисляем длину строки
-    // создаём сокет
-    int mySocket = socket(AF_INET, SOCK_STREAM, 0); //tcp протокол
-    if (mySocket == -1) {
-        close(mySocket);
-        Exception("Error open socket",1);
-    }
-    //связываем сокет с адрессом
-    int rc = bind(mySocket,(const sockaddr *) selfAddr, sizeof(sockaddr_in));
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error bind socket with local address",2);
-        }
-    //установливаем соединение
-    rc = connect(mySocket, (const sockaddr*) remoteAddr, sizeof(sockaddr_in));
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error connect socket with remote server.", 3);
-    }
 
-    // передаём сообщение из буффера
-    rc = send(mySocket, buffer, msgLen, 0);
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error send message", 4);
+using namespace std;
+#define port 13
+#define address "172.16.40.1"
+
+int main (int argc, char **argv)
+{
+    //Адрес программы-клиента
+    sockaddr_in *сAddr = new (sockaddr_in);
+    сAddr->sin_family = AF_INET; 
+   	сAddr->sin_port = 0; 
+    сAddr->sin_addr.s_addr = 0;
+    //Адрес программы-сервера)
+    sockaddr_in * sAddr = new (sockaddr_in);
+    sAddr->sin_family = AF_INET; 
+    sAddr->sin_port = htons(port); 
+    sAddr->sin_addr.s_addr = inet_addr(address); // все адреса нашего пк
+    
+    //буфер для передачи и приема данных
+    string s("Сколько времени?\n");
+    char *buf = new char[512];
+    strcpy (buf, s.c_str());
+    int msgLen = s.size(); 
+    
+    // создание сокета
+    int Socket = socket(AF_INET, SOCK_DGRAM, 0);//UDP 
+    if (Socket == -1) {
+         exit(1);
     }
-    cout << "We send: " << buffer << endl; 
-    // принимаем ответ в буффер
-    rc = recv(mySocket, buffer, 1024, 0);
+    int rc = bind(Socket, (const sockaddr *) cAddr, sizeof (sockaddr_in));
     if (rc == -1) {
-        close(mySocket);
-       Exception("Error receive answer.", 5);
+        exit(1);
     }
-    buffer[rc] = '\0'; // конец принятой строки
-    cout << "We receive: " << buffer << endl; // вывод полученного сообщения от сервера
-    // закрыем сокет
-    close(mySocket);
-    delete selfAddr;
-    delete remoteAddr;
-    delete[] buffer;
+    //установка соединения
+    rc = connect(Socket, (const sockaddr*) sAddr, sizeof(sockaddr_in));
+    if (rc == -1) {
+        close(Socket);
+        exit(1);
+    }
+    //передача и приём данных 
+    rc = send(Socket, buf,msgLen,0);
+    if (rc == -1) {
+        close(Socket);
+        exit(1);
+    }
+    cout << "We send: " << buf << endl;
+    rc = recv(Socket, buf, 512,0);
+    if ( rc == -1) {
+        close(Socket);
+        exit(1);
+    }
+    buf[rc]='\0';
+    cout << "We receive: " << buf << endl;
+    // закрыть сокет
+    close(Socket);
+
+    delete сAddr;
+    delete sAddr;
+    delete[] buf;
     return 0;
 }
