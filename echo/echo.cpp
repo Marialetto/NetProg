@@ -1,71 +1,68 @@
+
 #include <iostream>
-#include <string>
-#include <cstdlib> //exit()
-#include <cstring> // strpy()
-#include <unistd.h> //close()
-#include <netinet/in.h> 
+#include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+#include <netinet/in.h>
 #include <arpa/inet.h>
 using namespace std;
-void Exception(const string & why, const int exitCode ) // Исключения (возможные ошибки)
-{
-    cout << "ErrorCode:"<<exitCode <<endl<< why << endl;
-    exit(exitCode);
-}
-int main()
-{
-    // структура с адресом нашей программы (клиента)
-    sockaddr_in * selfAddr = new (sockaddr_in);
-    selfAddr->sin_family = AF_INET; // интернет протокол IPv4
-    selfAddr->sin_port = 0;         // любой порт на усмотрение ОС
-    selfAddr->sin_addr.s_addr = 0;  
-    // структура с адресом "на той стороне" (сервера)
-    sockaddr_in * remoteAddr = new (sockaddr_in);
-    remoteAddr->sin_family = AF_INET;     // интернет протокол IPv4
-    remoteAddr->sin_port = htons(7);  // port 7
-    remoteAddr->sin_addr.s_addr = inet_addr("95.152.62.42"); //  адрес 
-    // буфер для передачи и приема данных
-    char *buffer = new char[4096];
-    strcpy(buffer,"Hello, World!");   //копируем строку
-    int msgLen = strlen(buffer);           //вычисляем длину строки
-    // создаём сокет
-    int mySocket = socket(AF_INET, SOCK_STREAM, 0); //tcp протокол
-    if (mySocket == -1) {
-        close(mySocket);
-        Exception("Error open socket",1);
-    }
-    //связываем сокет с адрессом
-    int rc = bind(mySocket,(const sockaddr *) selfAddr, sizeof(sockaddr_in));
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error bind socket with local address",2);
-        }
-    //установливаем соединение
-    rc = connect(mySocket, (const sockaddr*) remoteAddr, sizeof(sockaddr_in));
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error connect socket with remote server.", 3);
-    }
+#define port 7
+#define address "172.16.40.1"
 
-    // передаём сообщение из буффера
-    rc = send(mySocket, buffer, msgLen, 0);
-    if (rc == -1) {
-        close(mySocket);
-        Exception("Error send message", 4);
+int main (int argc, char **argv)
+{
+    //Cтруктура с адресом программы-клиента
+ sockaddr_in * cAddr = new (sockaddr_in);
+ cAddr->sin_family = AF_INET; // интернет протокол IPv4
+ cAddr->sin_port = 0; // любой порт на усмотрение ОС
+ cAddr->sin_addr.s_addr = 0; // все адреса нашего пк
+
+    //Cтруктура с адресом программы сервера
+ sockaddr_in * sAddr = new (sockaddr_in);
+ sAddr->sin_family = AF_INET; // интернет протокол IPv4
+ sAddr->sin_port = htons(port); // порт 
+ sAddr->sin_addr.s_addr = inet_addr(address); // все адреса нашего пк
+    // подготовить буфер для передачи и приема данных
+    char *buf = new char[512];
+    strcpy(buf,"hello world\n"); // копируем строку
+    int msgLen = strlen(buf); // вычисляем длину строки
+    // создать сокет
+    int Socket = socket(AF_INET, SOCK_STREAM, 0); //TCP
+    if (Socket == -1) {
+        cerr << "Error open socket";
     }
-    cout << "We send: " << buffer << endl; 
-    // принимаем ответ в буффер
-    rc = recv(mySocket, buffer, 1024, 0);
+    //связать сокет с адресом
+    int rc = bind(Socket, (const sockaddr *) cAddr, sizeof ( sockaddr_in));
     if (rc == -1) {
-        close(mySocket);
-       Exception("Error receive answer.", 5);
+        close(Socket);
+        cerr <<"Error bind socket with local address";
     }
-    buffer[rc] = '\0'; // конец принятой строки
-    cout << "We receive: " << buffer << endl; // вывод полученного сообщения от сервера
-    // закрыем сокет
-    close(mySocket);
-    delete selfAddr;
-    delete remoteAddr;
-    delete[] buffer;
+    //установить соединение
+	rc = connect(Socket, ( const sockaddr*) sAddr, sizeof(sockaddr_in));
+    if ( rc == -1) {
+        close(Socket);
+        cerr <<"Error connect socket with remote server";
+    }
+    //передать данные
+ 	rc = send(Socket, buf,msgLen,0);
+    if ( rc == -1) {
+        close(Socket);
+        cerr <<"Error send message";
+    }
+ 	cout << "We send:  " << buf << endl;
+    // принять ответ
+ 	rc = recv(Socket, buf, 512,0);
+    if ( rc == -1) {
+        close(Socket);
+        cerr <<"Error receive answer";
+    }
+ 	buf[rc]='\0';
+ 	cout << "We receive:  " << buf << endl;
+    // закрыть сокет
+    close(Socket);
+
+    delete cAddr;
+    delete sAddr;
+    delete[] buf;
     return 0;
 }
-
