@@ -26,7 +26,7 @@ int main (int argc, char **argv)
  sAddr->sin_addr.s_addr = inet_addr(address); // все адреса нашего пк
 	
     // Буфер для передачи и приема данных
-    char *buf = new char[bufSize 512];
+    char *buf = new char[bufSize];
     int msgLen = str.length(); // вычисляем длину строки
     size_t length = str.copy(buf,msgLen); // копируем строку
 	
@@ -55,7 +55,7 @@ int main (int argc, char **argv)
     }
  	cout << "We send:  " << buf << endl;
 
- 	rc = recv(Socket, buf, 512,0);
+ 	rc = recv(Socket, buf,bufSize,0);
     if ( rc == -1) {
         close(Socket);
         cerr <<"Error receive answer";
