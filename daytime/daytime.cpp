@@ -8,6 +8,7 @@
 using namespace std;
 #define port 13
 #define address "172.16.40.1"
+#define bufSize 512 
 
 int main (int argc, char **argv)
 {
@@ -19,12 +20,11 @@ int main (int argc, char **argv)
     //Адрес программы-сервера)
     sockaddr_in * sAddr = new (sockaddr_in);
     sAddr->sin_family = AF_INET; 
-    sAddr->sin_port = htons(13); 
-    sAddr->sin_addr.s_addr = inet_addr("127.0.0.1"); // все адреса нашего пк
+    sAddr->sin_port = htons(port); 
+    sAddr->sin_addr.s_addr = inet_addr(address); // все адреса нашего пк
     
     //буфер для передачи и приема данных
-    //string s="Сколько времени?\n";
-  	char *buf = new char[512];
+  	char *buf = new char[bufSize];
   	string str ("Сколько времени?\n");
   	int msgLen = str.length(); // вычисляем длину строки
   	size_t length = str.copy(buf,msgLen); // копируем строку
@@ -51,7 +51,7 @@ int main (int argc, char **argv)
         exit(1);
     }
     cout << "We send: " << buf << endl;
-    rc = recv(Socket, buf, 512,0);
+    rc = recv(Socket, buf, bufSize,0);
     if ( rc == -1) {
         close(Socket);
         exit(1);
